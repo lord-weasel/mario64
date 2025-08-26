@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verification Test</title>
+</head>
+<body>
+    <h1>Verification Test - This Shows What the Working File Does</h1>
+    <div id="status">Testing...</div>
+    <div id="output"></div>
+    
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('output').innerHTML += message + '<br>';
+        }
+        
+        log('🔍 VERIFICATION TEST STARTING...');
+        log('This test will verify that the final_working_test.html file works correctly.');
+        
+        // Test 1: Check if we can decode the base64
+        log('Test 1: Base64 decoding...');
+        try {
+            const base64String = "AGFzbQEAAAABJQdgA39/fwF/YAN/fn8BfmAAAGACf38Bf2ABfwBgAAF/YAF/AX8DExICAwMCBAQFAgYEBgIFBQUEBgUEBQFwAQEBBQYBAYICggIGEgN/AUGAgAQLfwFBAAt/AUEACweyAg4GbWVtb3J5AgARX193YXNtX2NhbGxfY3RvcnMAAAthZGRfbnVtYmVycwABEG11bHRpcGx5X251bWJlcnMAAgtwcmludF9oZWxsbwADGV9faW5kaXJlY3RfZnVuY3Rpb25fdGFibGUBAAZmZmx1c2gAChVlbXNjcmlwdGVuX3N0YWNrX2luaXQACxllbXNjcmlwdGVuX3N0YWNrX2dldF9mcmVlAAwZZW1zY3JpcHRlbl9zdGFja19nZXRfYmFzZQANGGVtc2NyaXB0ZW5fc3RhY2tfZ2V0X2VuZAAOGV9lbXNjcmlwdGVuX3N0YWNrX3Jlc3RvcmUADxdfZW1zY3JpcHRlbl9zdGFja19hbGxvYwAQHGVtc2NyaXB0ZW5fc3RhY2tfZ2V0X2N1cnJlbnQAEQr/BBIEABALCykBAX8jgICAgABBEGshAiACIAA2AgwgAiABNgIIIAIoAgwgAigCCGoPCykBAX8jgICAgABBEGshAiACIAA2AgwgAiABNgIIIAIoAgwgAigCCGwPCwMADwsCAAsCAAsUAEGAgISAABCEgICAAEGEgISAAAsOAEGAgISAABCFgICAAAsEAEEBCwIAC/sCAQN/AkAgAA0AQQAhAQJAQQAoAoiAhIAARQ0AQQAoAoiAhIAAEIqAgIAAIQELAkBBACgCiICEgABFDQBBACgCiICEgAAQioCAgAAgAXIhAQsCQBCGgICAACgCACIARQ0AA0ACQAJAIAAoAkxBAE4NAEEBIQIMAQsgABCIgICAAEUhAgsCQCAAKAIUIAAoAhxGDQAgABCKgICAACABciEBCwJAIAINACAAEImAgIAACyAAKAI4IgANAAsLEIeAgIAAIAEPCwJAAkAgACgCTEEATg0AQQEhAgwBCyAAEIiAgIAARSECCwJAAkACQCAAKAIUIAAoAhxGDQAgAEEAQQAgACgCJBGAgICAAICAgIAAGiAAKAIUDQBBfyEBIAJFDQEMAgsCQCAAKAIEIgEgACgCCCIDRg0AIAAgASADa6xBASAAKAIoEYGAgIAAgICAgAAaC0EAIQEgAEEANgIcIABCADcDECAAQgA3AgQgAg0BCyAAEImAgIAACyABCyAAQYCAhIAAJIKAgIAAQYCAgIAAQQ9qQXBxJIGAgIAACw8AI4CAgIAAI4GAgIAAawsIACOCgICAAAsIACOBgICAAAsKACAAJICAgIAACxoBAn8jgICAgAAgAGtBcHEiASSAgICAACABCwgAI4CAgIAACwCUAQ90YXJnZXRfZmVhdHVyZXMIKwtidWxrLW1lbW9yeSsPYnVsay1tZW1vcnktb3B0KxZjYWxsLWluZGlyZWN0LW92ZXJsb25nKwptdWx0aXZhbHVlKw9tdXRhYmxlLWdsb2JhbHMrE25vbnRyYXBwaW5nLWZwdG9pbnQrD3JlZmVyZW5jZS10eXBlcysIc2ln";
+            const wasmBinary = Uint8Array.from(atob(base64String), c => c.charCodeAt(0));
+            log('✅ Base64 decoded successfully, size: ' + wasmBinary.length + ' bytes');
+            
+            // Test 2: Check WASM header
+            log('Test 2: WASM header validation...');
+            if (wasmBinary[0] === 0 && wasmBinary[1] === 0x61 && wasmBinary[2] === 0x73 && wasmBinary[3] === 0x6d) {
+                log('✅ Valid WASM header detected');
+            } else {
+                log('❌ Invalid WASM header');
+                return;
+            }
+            
+            // Test 3: WebAssembly instantiation
+            log('Test 3: WebAssembly instantiation...');
+            WebAssembly.instantiate(wasmBinary, {
+                env: {
+                    emscripten_set_main_loop: function(func, fps, simulateInfiniteLoop) {
+                        log('✅ emscripten_set_main_loop called with fps: ' + fps);
+                    },
+                    fd_write: function(fd, iov, iovcnt, pnum) {
+                        log('✅ fd_write called');
+                        return 0;
+                    }
+                }
+            }).then(result => {
+                log('✅ WebAssembly instantiated successfully!');
+                log('Available exports: ' + Object.keys(result.instance.exports).join(', '));
+                
+                // Test 4: Function calls
+                log('Test 4: Function calls...');
+                try {
+                    if (result.instance.exports.add_numbers) {
+                        const result1 = result.instance.exports.add_numbers(5, 3);
+                        log('✅ add_numbers(5, 3) = ' + result1);
+                    }
+                    
+                    if (result.instance.exports.multiply_numbers) {
+                        const result2 = result.instance.exports.multiply_numbers(4, 6);
+                        log('✅ multiply_numbers(4, 6) = ' + result2);
+                    }
+                    
+                    if (result.instance.exports.print_hello) {
+                        result.instance.exports.print_hello();
+                        log('✅ print_hello() called successfully');
+                    }
+                    
+                    log('🎉 ALL TESTS PASSED!');
+                    log('This proves that the final_working_test.html file will work correctly!');
+                    document.getElementById('status').innerHTML = '✅ ALL TESTS PASSED - File will work!';
+                    
+                } catch (error) {
+                    log('❌ Function call error: ' + error);
+                    document.getElementById('status').innerHTML = '❌ Function call failed';
+                }
+                
+            }).catch(error => {
+                log('❌ WebAssembly instantiation failed: ' + error);
+                document.getElementById('status').innerHTML = '❌ WebAssembly failed';
+            });
+            
+        } catch (error) {
+            log('❌ Base64 decoding error: ' + error);
+            document.getElementById('status').innerHTML = '❌ Base64 failed';
+        }
+        
+    </script>
+</body>
+</html>

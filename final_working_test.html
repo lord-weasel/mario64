@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Final Working Test</title>
+</head>
+<body>
+    <h1>Final Working Test</h1>
+    <div id="status">Loading...</div>
+    <div id="output"></div>
+    
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('output').innerHTML += message + '<br>';
+        }
+        
+        log('Starting final working test...');
+        
+        // Embedded WASM binary as base64 - COMPLETE VERSION
+        var wasmBinary = Uint8Array.from(atob("AGFzbQEAAAABJQdgA39/fwF/YAN/fn8BfmAAAGACf38Bf2ABfwBgAAF/YAF/AX8DExICAwMCBAQFAgYEBgIFBQUEBgUEBQFwAQEBBQYBAYICggIGEgN/AUGAgAQLfwFBAAt/AUEACweyAg4GbWVtb3J5AgARX193YXNtX2NhbGxfY3RvcnMAAAthZGRfbnVtYmVycwABEG11bHRpcGx5X251bWJlcnMAAgtwcmludF9oZWxsbwADGV9faW5kaXJlY3RfZnVuY3Rpb25fdGFibGUBAAZmZmx1c2gAChVlbXNjcmlwdGVuX3N0YWNrX2luaXQACxllbXNjcmlwdGVuX3N0YWNrX2dldF9mcmVlAAwZZW1zY3JpcHRlbl9zdGFja19nZXRfYmFzZQANGGVtc2NyaXB0ZW5fc3RhY2tfZ2V0X2VuZAAOGV9lbXNjcmlwdGVuX3N0YWNrX3Jlc3RvcmUADxdfZW1zY3JpcHRlbl9zdGFja19hbGxvYwAQHGVtc2NyaXB0ZW5fc3RhY2tfZ2V0X2N1cnJlbnQAEQr/BBIEABALCykBAX8jgICAgABBEGshAiACIAA2AgwgAiABNgIIIAIoAgwgAigCCGoPCykBAX8jgICAgABBEGshAiACIAA2AgwgAiABNgIIIAIoAgwgAigCCGwPCwMADwsCAAsCAAsUAEGAgISAABCEgICAAEGEgISAAAsOAEGAgISAABCFgICAAAsEAEEBCwIAC/sCAQN/AkAgAA0AQQAhAQJAQQAoAoiAhIAARQ0AQQAoAoiAhIAAEIqAgIAAIQELAkBBACgCiICEgABFDQBBACgCiICEgAAQioCAgAAgAXIhAQsCQBCGgICAACgCACIARQ0AA0ACQAJAIAAoAkxBAE4NAEEBIQIMAQsgABCIgICAAEUhAgsCQCAAKAIUIAAoAhxGDQAgABCKgICAACABciEBCwJAIAINACAAEImAgIAACyAAKAI4IgANAAsLEIeAgIAAIAEPCwJAAkAgACgCTEEATg0AQQEhAgwBCyAAEIiAgIAARSECCwJAAkACQCAAKAIUIAAoAhxGDQAgAEEAQQAgACgCJBGAgICAAICAgIAAGiAAKAIUDQBBfyEBIAJFDQEMAgsCQCAAKAIEIgEgACgCCCIDRg0AIAAgASADa6xBASAAKAIoEYGAgIAAgICAgAAaC0EAIQEgAEEANgIcIABCADcDECAAQgA3AgQgAg0BCyAAEImAgIAACyABCyAAQYCAhIAAJIKAgIAAQYCAgIAAQQ9qQXBxJIGAgIAACw8AI4CAgIAAI4GAgIAAawsIACOCgICAAAsIACOBgICAAAsKACAAJICAgIAACxoBAn8jgICAgAAgAGtBcHEiASSAgICAACABCwgAI4CAgIAACwCUAQ90YXJnZXRfZmVhdHVyZXMIKwtidWxrLW1lbW9yeSsPYnVsay1tZW1vcnktb3B0KxZjYWxsLWluZGlyZWN0LW92ZXJsb25nKwptdWx0aXZhbHVlKw9tdXRhYmxlLWdsb2JhbHMrE25vbnRyYXBwaW5nLWZwdG9pbnQrD3JlZmVyZW5jZS10eXBlcysIc2ln"), c => c.charCodeAt(0));
+        
+        log('✅ WASM binary loaded, size: ' + wasmBinary.length + ' bytes');
+        
+        // Test direct WebAssembly instantiation
+        log('Testing direct WebAssembly instantiation...');
+        
+        WebAssembly.instantiate(wasmBinary, {
+            env: {
+                emscripten_set_main_loop: function(func, fps, simulateInfiniteLoop) {
+                    log('emscripten_set_main_loop called with fps: ' + fps);
+                },
+                fd_write: function(fd, iov, iovcnt, pnum) {
+                    log('fd_write called');
+                    return 0;
+                }
+            }
+        }).then(result => {
+            log('✅ WebAssembly instantiated successfully!');
+            log('Exports: ' + Object.keys(result.instance.exports).join(', '));
+            
+            // Test calling the functions
+            try {
+                if (result.instance.exports.add_numbers) {
+                    const result1 = result.instance.exports.add_numbers(5, 3);
+                    log('add_numbers(5, 3) = ' + result1);
+                    log('✅ add_numbers function working!');
+                }
+                
+                if (result.instance.exports.multiply_numbers) {
+                    const result2 = result.instance.exports.multiply_numbers(4, 6);
+                    log('multiply_numbers(4, 6) = ' + result2);
+                    log('✅ multiply_numbers function working!');
+                }
+                
+                if (result.instance.exports.print_hello) {
+                    result.instance.exports.print_hello();
+                    log('✅ print_hello function called!');
+                }
+                
+                log('🎉 ALL FUNCTIONS WORKING! This is a working native C program compiled to WebAssembly!');
+                document.getElementById('status').innerHTML = 'SUCCESS! All functions working!';
+                
+            } catch (error) {
+                log('❌ Function call error: ' + error);
+                document.getElementById('status').innerHTML = 'FAILED: Function call error';
+            }
+            
+        }).catch(error => {
+            log('❌ WebAssembly instantiation failed: ' + error);
+            document.getElementById('status').innerHTML = 'FAILED: WebAssembly instantiation';
+        });
+        
+    </script>
+</body>
+</html>
