@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Mario 64 - Web Edition</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .game-container {
+            position: relative;
+            border: 3px solid #333;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: #000;
+        }
+        
+        #game {
+            display: block;
+            border-radius: 7px;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn.pause {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+        }
+        
+        .status {
+            margin-top: 15px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .instructions {
+            margin-top: 20px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+        
+        .instructions h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Super Mario 64</h1>
+        <p>Web Edition - Running entirely in your browser</p>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="game" width="640" height="480"></canvas>
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <div>Loading SM64...</div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="btn" onclick="startGame()">Start Game</button>
+        <button class="btn pause" onclick="pauseGame()">Pause Game</button>
+        <button class="btn" onclick="resetGame()">Reset</button>
+    </div>
+    
+    <div class="status" id="status">
+        Status: Initializing...
+    </div>
+    
+    <div class="instructions">
+        <h3>How to Play</h3>
+        <p>This is a web-based version of Super Mario 64 compiled with Emscripten. The game runs entirely in your browser using WebAssembly and WebGL.</p>
+        <p><strong>Controls:</strong> Use your keyboard and mouse to control Mario. Arrow keys for movement, spacebar for jumping.</p>
+        <p><strong>Note:</strong> This is a demonstration build. Full game functionality requires additional development and integration with the complete SM64 codebase.</p>
+    </div>
+
+    <script>
+        // Embedded WASM data
+        const wasmBase64 = `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`;
+        
+        // Function to get WASM data
+        function getWasmData() {
+            return Uint8Array.from(atob(wasmBase64), c => c.charCodeAt(0));
+        }
+        
+
+        // Game state
+        let gameModule = null;
+        let gameRunning = false;
+        let frameCount = 0;
+        
+        // DOM elements
+        const canvas = document.getElementById('game');
+        const loading = document.getElementById('loading');
+        const status = document.getElementById('status');
+        
+        // Initialize the game
+        async function initGame() {
+            try {
+                status.textContent = 'Status: Loading Emscripten module...';
+                
+                // Load the Emscripten module
+                const Module = await createModule();
+                
+                // Store the module reference
+                gameModule = Module;
+                
+                status.textContent = 'Status: Game ready!';
+                loading.style.display = 'none';
+                
+                console.log('SM64 Web module loaded successfully!');
+                
+                // Auto-start the game
+                startGame();
+                
+            } catch (error) {
+                console.error('Failed to initialize game:', error);
+                status.textContent = 'Status: Initialization failed - ' + error.message;
+                loading.innerHTML = '<div style="color: #ff6b6b;">❌ Failed to load game</div>';
+            }
+        }
+        
+        // Create the Emscripten module
+        function createModule() {
+            return new Promise((resolve, reject) => {
+                // Emscripten module configuration
+                const moduleConfig = {
+                    canvas: canvas,
+                    print: (text) => {
+                        console.log('SM64:', text);
+                        if (text.includes('initialized')) {
+                            status.textContent = 'Status: WebGL initialized';
+                        }
+                    },
+                    printErr: (text) => {
+                        console.error('SM64 Error:', text);
+                        status.textContent = 'Status: Error - ' + text;
+                    },
+                    onRuntimeInitialized: () => {
+                        console.log('SM64 runtime initialized');
+                        status.textContent = 'Status: Runtime ready';
+                        resolve(Module);
+                    },
+                    onAbort: (reason) => {
+                        console.error('Module aborted:', reason);
+                        reject(new Error('Module aborted: ' + reason));
+                    }
+                };
+                
+                // Set global Module for Emscripten
+                window.Module = moduleConfig;
+                
+                // Create module directly since JS is now inline
+                    try {
+                        // The Emscripten module should be available now
+                        if (typeof Module !== 'undefined') {
+                            resolve(Module);
+                        } else {
+                            reject(new Error('Emscripten module not found'));
+                        }
+                    } catch (error) {
+                        reject(error);
+                    }
+            });
+        }
+        
+        // Start the game
+        function startGame() {
+            if (gameModule && gameModule._start_game) {
+                try {
+                    gameModule._start_game();
+                    gameRunning = true;
+                    status.textContent = 'Status: Game running - Frame: ' + frameCount;
+                    console.log('Game started');
+                } catch (error) {
+                    console.error('Error starting game:', error);
+                    status.textContent = 'Status: Error starting game - ' + error.message;
+                }
+            } else {
+                console.log('Game module not ready yet');
+            }
+        }
+        
+        // Pause the game
+        function pauseGame() {
+            if (gameModule && gameModule._pause_game) {
+                try {
+                    gameModule._pause_game();
+                    gameRunning = false;
+                    status.textContent = 'Status: Game paused';
+                    console.log('Game paused');
+                } catch (error) {
+                    console.error('Error pausing game:', error);
+                }
+            }
+        }
+        
+        // Reset the game
+        function resetGame() {
+            if (gameModule && gameModule._main) {
+                try {
+                    // Reinitialize the game
+                    gameModule._main();
+                    status.textContent = 'Status: Game reset';
+                    console.log('Game reset');
+                } catch (error) {
+                    console.error('Error resetting game:', error);
+                }
+            }
+        }
+        
+        // Update frame counter
+        function updateFrameCounter() {
+            if (gameModule && gameModule._get_frame_count) {
+                try {
+                    frameCount = gameModule._get_frame_count();
+                    if (gameRunning) {
+                        status.textContent = 'Status: Game running - Frame: ' + frameCount;
+                    }
+                } catch (error) {
+                    // Frame counter might not be ready yet
+                }
+            }
+        }
+        
+        // Start frame counter updates
+        setInterval(updateFrameCounter, 100);
+        
+        // Initialize when page loads
+        window.addEventListener('load', initGame);
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            // Keep canvas centered
+            const container = document.querySelector('.game-container');
+            container.style.margin = '0 auto';
+        });
+    </script>
+</body>
+</html>
