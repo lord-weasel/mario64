@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal SM64 Test</title>
+</head>
+<body>
+    <h1>Testing SM64 Module Loading</h1>
+    <div id="status">Starting test...</div>
+    <div id="output"></div>
+    
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('output').innerHTML += message + '<br>';
+        }
+        
+        function testStep1() {
+            log('Step 1: Testing if files exist...');
+            
+            // Test if JS file can be loaded
+            fetch('working_sm64.js')
+                .then(response => {
+                    if (response.ok) {
+                        log('✅ JS file accessible');
+                        return testStep2();
+                    } else {
+                        log('❌ JS file not accessible: ' + response.status);
+                    }
+                })
+                .catch(error => {
+                    log('❌ JS file fetch error: ' + error);
+                });
+        }
+        
+        function testStep2() {
+            log('Step 2: Testing if WASM file can be loaded...');
+            
+            fetch('working_sm64.wasm')
+                .then(response => {
+                    if (response.ok) {
+                        log('✅ WASM file accessible');
+                        return testStep3();
+                    } else {
+                        log('❌ WASM file not accessible: ' + response.status);
+                    }
+                })
+                .catch(error => {
+                    log('❌ WASM file fetch error: ' + error);
+                });
+        }
+        
+        function testStep3() {
+            log('Step 3: Loading JavaScript file...');
+            
+            const script = document.createElement('script');
+            script.src = 'working_sm64.js';
+            
+            script.onload = () => {
+                log('✅ Script loaded successfully');
+                testStep4();
+            };
+            
+            script.onerror = (error) => {
+                log('❌ Script load error: ' + error);
+            };
+            
+            document.head.appendChild(script);
+        }
+        
+        function testStep4() {
+            log('Step 4: Checking if WorkingSM64Module function exists...');
+            
+            if (typeof window.WorkingSM64Module === 'function') {
+                log('✅ WorkingSM64Module function found!');
+                testStep5();
+            } else {
+                log('❌ WorkingSM64Module function NOT found');
+                log('Available globals: ' + Object.keys(window).filter(k => k.includes('Module')).join(', '));
+            }
+        }
+        
+        function testStep5() {
+            log('Step 5: Creating module...');
+            
+            const moduleConfig = {
+                canvas: document.createElement('canvas'),
+                print: (text) => log('Print: ' + text),
+                printErr: (text) => log('Error: ' + text),
+                onRuntimeInitialized: () => {
+                    log('✅ Runtime initialized!');
+                    document.getElementById('status').innerHTML = 'SUCCESS: Module loaded!';
+                },
+                onAbort: (reason) => {
+                    log('❌ Module aborted: ' + reason);
+                    document.getElementById('status').innerHTML = 'FAILED: Module aborted';
+                }
+            };
+            
+            try {
+                window.WorkingSM64Module(moduleConfig).then(module => {
+                    log('✅ Module created successfully!');
+                    log('Available functions: ' + Object.keys(module).filter(k => k.startsWith('_')).join(', '));
+                }).catch(error => {
+                    log('❌ Module creation failed: ' + error);
+                });
+            } catch (error) {
+                log('❌ Module creation error: ' + error);
+            }
+        }
+        
+        // Start testing when page loads
+        window.addEventListener('load', testStep1);
+    </script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug SM64 Test</title>
+</head>
+<body>
+    <h1>Debug Test</h1>
+    <div id="status">Starting...</div>
+    <div id="output"></div>
+    
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('output').innerHTML += message + '<br>';
+        }
+        
+        // Test 1: Check if we can access the files
+        log('Test 1: Checking file accessibility...');
+        
+        // Test 2: Try to load the script
+        log('Test 2: Loading script...');
+        
+        const script = document.createElement('script');
+        script.src = 'working_sm64.js';
+        
+        script.onload = function() {
+            log('✅ Script loaded');
+            
+            // Test 3: Check if the function exists
+            log('Test 3: Checking if WorkingSM64Module exists...');
+            log('typeof WorkingSM64Module: ' + typeof WorkingSM64Module);
+            log('typeof window.WorkingSM64Module: ' + typeof window.WorkingSM64Module);
+            
+            if (typeof window.WorkingSM64Module === 'function') {
+                log('✅ WorkingSM64Module function found!');
+                
+                // Test 4: Try to create the module
+                log('Test 4: Creating module...');
+                
+                try {
+                    const moduleConfig = {
+                        canvas: document.createElement('canvas'),
+                        print: (text) => log('Print: ' + text),
+                        printErr: (text) => log('Error: ' + text),
+                        onRuntimeInitialized: () => {
+                            log('✅ Runtime initialized!');
+                            document.getElementById('status').innerHTML = 'SUCCESS!';
+                        },
+                        onAbort: (reason) => {
+                            log('❌ Module aborted: ' + reason);
+                            document.getElementById('status').innerHTML = 'FAILED: ' + reason;
+                        }
+                    };
+                    
+                    window.WorkingSM64Module(moduleConfig).then(module => {
+                        log('✅ Module created!');
+                        log('Module keys: ' + Object.keys(module).join(', '));
+                    }).catch(error => {
+                        log('❌ Module creation failed: ' + error);
+                    });
+                    
+                } catch (error) {
+                    log('❌ Error creating module: ' + error);
+                }
+                
+            } else {
+                log('❌ WorkingSM64Module function NOT found');
+                log('Available globals: ' + Object.keys(window).filter(k => k.includes('Module')).join(', '));
+            }
+        };
+        
+        script.onerror = function(error) {
+            log('❌ Script load error: ' + error);
+            document.getElementById('status').innerHTML = 'FAILED: Script load error';
+        };
+        
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>

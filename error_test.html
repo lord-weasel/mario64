@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Error Test</title>
+</head>
+<body>
+    <h1>Error Test</h1>
+    <div id="status">Loading...</div>
+    <div id="output"></div>
+    
+    <script>
+        // Global error handler
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error('Global error:', message, source, lineno, colno, error);
+            document.getElementById('output').innerHTML += '❌ Global error: ' + message + '<br>';
+        };
+        
+        // Unhandled promise rejection handler
+        window.onunhandledrejection = function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+            document.getElementById('output').innerHTML += '❌ Unhandled promise rejection: ' + event.reason + '<br>';
+        };
+        
+        function log(message) {
+            console.log(message);
+            document.getElementById('output').innerHTML += message + '<br>';
+        }
+        
+        log('Starting error test...');
+        
+        try {
+            // Test 1: Check if we can access the files
+            log('Test 1: Checking file accessibility...');
+            
+            fetch('minimal_sm64.js')
+                .then(response => {
+                    if (response.ok) {
+                        log('✅ JS file accessible');
+                        return fetch('minimal_sm64.wasm');
+                    } else {
+                        log('❌ JS file not accessible: ' + response.status);
+                        throw new Error('JS file not accessible');
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        log('✅ WASM file accessible');
+                        return loadScript();
+                    } else {
+                        log('❌ WASM file not accessible: ' + response.status);
+                        throw new Error('WASM file not accessible');
+                    }
+                })
+                .catch(error => {
+                    log('❌ File accessibility error: ' + error);
+                    document.getElementById('status').innerHTML = 'FAILED: ' + error;
+                });
+                
+        } catch (error) {
+            log('❌ Test 1 error: ' + error);
+        }
+        
+        function loadScript() {
+            log('Test 2: Loading script...');
+            
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'minimal_sm64.js';
+                
+                script.onload = () => {
+                    log('✅ Script loaded successfully');
+                    resolve();
+                };
+                
+                script.onerror = (error) => {
+                    log('❌ Script load error: ' + error);
+                    reject(new Error('Script load error: ' + error));
+                };
+                
+                document.head.appendChild(script);
+            }).then(() => {
+                return checkModule();
+            }).catch(error => {
+                log('❌ Script loading failed: ' + error);
+                throw error;
+            });
+        }
+        
+        function checkModule() {
+            log('Test 3: Checking if module function exists...');
+            
+            if (typeof window.MinimalSM64Module === 'function') {
+                log('✅ MinimalSM64Module function found!');
+                return createModule();
+            } else {
+                log('❌ MinimalSM64Module function NOT found');
+                log('Available globals: ' + Object.keys(window).filter(k => k.includes('Module')).join(', '));
+                throw new Error('Module function not found');
+            }
+        }
+        
+        function createModule() {
+            log('Test 4: Creating module...');
+            
+            const moduleConfig = {
+                print: (text) => log('Print: ' + text),
+                printErr: (text) => log('Error: ' + text),
+                onRuntimeInitialized: () => {
+                    log('✅ Runtime initialized!');
+                    document.getElementById('status').innerHTML = 'SUCCESS!';
+                },
+                onAbort: (reason) => {
+                    log('❌ Module aborted: ' + reason);
+                    document.getElementById('status').innerHTML = 'FAILED: ' + reason;
+                }
+            };
+            
+            try {
+                return window.MinimalSM64Module(moduleConfig).then(module => {
+                    log('✅ Module created successfully!');
+                    log('Available functions: ' + Object.keys(module).filter(k => k.startsWith('_')).join(', '));
+                    
+                    // Store module reference
+                    window.module = module;
+                    
+                    // Test the functions
+                    return testFunctions(module);
+                    
+                }).catch(error => {
+                    log('❌ Module creation failed: ' + error);
+                    throw error;
+                });
+                
+            } catch (error) {
+                log('❌ Error creating module: ' + error);
+                throw error;
+            }
+        }
+        
+        function testFunctions(module) {
+            log('Test 5: Testing functions...');
+            
+            try {
+                const frameCount = module._get_frame_count();
+                log('Frame count: ' + frameCount);
+                
+                const marioX = module._get_mario_x();
+                log('Mario X: ' + marioX);
+                
+                const marioCoins = module._get_mario_coins();
+                log('Mario coins: ' + marioCoins);
+                
+                log('✅ All functions working!');
+                
+            } catch (error) {
+                log('❌ Function test error: ' + error);
+                throw error;
+            }
+        }
+        
+    </script>
+</body>
+</html>

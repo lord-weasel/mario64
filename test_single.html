@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Single Function Test</title>
+</head>
+<body>
+    <h1>Single Function Test</h1>
+    <div id="status">Loading...</div>
+    <div id="output"></div>
+    
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('output').innerHTML += message + '<br>';
+        }
+        
+        log('Starting single function test...');
+        
+        // Load the script
+        log('Loading script...');
+        
+        const script = document.createElement('script');
+        script.src = 'test_single.js';
+        
+        script.onload = function() {
+            log('✅ Script loaded successfully');
+            
+            if (typeof window.SingleModule === 'function') {
+                log('✅ SingleModule function found!');
+                
+                const moduleConfig = {
+                    onRuntimeInitialized: () => {
+                        log('✅ Runtime initialized!');
+                        document.getElementById('status').innerHTML = 'SUCCESS!';
+                        
+                        // Test the functions
+                        try {
+                            const result1 = window.module._add_numbers(5, 3);
+                            log('add_numbers(5, 3) = ' + result1);
+                            
+                            const result2 = window.module._multiply_numbers(4, 6);
+                            log('multiply_numbers(4, 6) = ' + result2);
+                            
+                            window.module._print_hello();
+                            log('print_hello() called');
+                            
+                            log('✅ All functions working!');
+                            
+                        } catch (error) {
+                            log('❌ Function call error: ' + error);
+                        }
+                    },
+                    onAbort: (reason) => {
+                        log('❌ Module aborted: ' + reason);
+                        document.getElementById('status').innerHTML = 'FAILED: ' + reason;
+                    }
+                };
+                
+                try {
+                    window.SingleModule(moduleConfig).then(module => {
+                        log('✅ Module created successfully!');
+                        log('Available functions: ' + Object.keys(module).filter(k => k.startsWith('_')).join(', '));
+                        
+                        // Store module reference
+                        window.module = module;
+                        
+                    }).catch(error => {
+                        log('❌ Module creation failed: ' + error);
+                        document.getElementById('status').innerHTML = 'FAILED: ' + error;
+                    });
+                    
+                } catch (error) {
+                    log('❌ Error creating module: ' + error);
+                    document.getElementById('status').innerHTML = 'FAILED: ' + error;
+                }
+                
+            } else {
+                log('❌ SingleModule function NOT found');
+                log('Available globals: ' + Object.keys(window).filter(k => k.includes('Module')).join(', '));
+                document.getElementById('status').innerHTML = 'FAILED: Function not found';
+            }
+        };
+        
+        script.onerror = function(error) {
+            log('❌ Script load error: ' + error);
+            document.getElementById('status').innerHTML = 'FAILED: Script load error';
+        };
+        
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>
