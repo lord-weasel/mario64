@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Mario 64 - Native Web Edition</title>
+    <title>Super Mario 64 - Working Native Edition</title>
     <style>
         body {
             margin: 0;
@@ -161,7 +161,7 @@
 <body>
     <div class="header">
         <h1>Super Mario 64</h1>
-        <p>Native Web Edition - Running the Actual Game!</p>
+        <p>Native Web Edition - Working Version!</p>
     </div>
     
     <div class="game-container">
@@ -187,6 +187,7 @@
         <p><strong>Frame Count:</strong> <span id="frameCount">0</span></p>
         <p><strong>Mario Position:</strong> X: <span id="marioX">0</span>, Y: <span id="marioY">0</span></p>
         <p><strong>Coins Collected:</strong> <span id="coinCount">0</span></p>
+        <p><strong>Mario Health:</strong> <span id="marioHealth">4</span></p>
         <p><strong>Game State:</strong> <span id="gameState">Initializing</span></p>
     </div>
     
@@ -198,8 +199,6 @@
             <li><strong>Arrow Keys:</strong> Move Mario left/right</li>
             <li><strong>Space:</strong> Jump (A Button)</li>
             <li><strong>Z:</strong> Punch (B Button)</li>
-            <li><strong>X:</strong> Special action (Z Button)</li>
-            <li><strong>C:</strong> Start/Pause</li>
         </ul>
         <p><strong>Game Features:</strong></p>
         <ul style="text-align: left; display: inline-block;">
@@ -227,6 +226,7 @@
         const marioXElement = document.getElementById('marioX');
         const marioYElement = document.getElementById('marioY');
         const coinCountElement = document.getElementById('coinCount');
+        const marioHealthElement = document.getElementById('marioHealth');
         const gameStateElement = document.getElementById('gameState');
         
         // Initialize the native SM64 game
@@ -257,7 +257,7 @@
             }
         }
         
-        // Create the Emscripten module
+        // Create the Emscripten module - WORKING VERSION
         function createModule() {
             return new Promise((resolve, reject) => {
                 // Emscripten module configuration
@@ -286,29 +286,34 @@
                     }
                 };
                 
-                // Set global Module for Emscripten
-                window.Module = moduleConfig;
-                
                 // Load the Emscripten JavaScript file
                 const script = document.createElement('script');
-                script.src = 'sm64_web.js';
+                script.src = 'working_sm64.js';
+                
                 script.onload = () => {
                     console.log('Emscripten script loaded');
                     
-                    // Now call the Module function to create the actual module
-                    if (typeof Module === 'function') {
-                        Module(moduleConfig).then(resolvedModule => {
+                    // The script should have created a global WorkingSM64Module function
+                    if (typeof window.WorkingSM64Module === 'function') {
+                        console.log('WorkingSM64Module function found, creating module...');
+                        
+                        // Create the module using the global function
+                        window.WorkingSM64Module(moduleConfig).then(resolvedModule => {
                             console.log('Module created successfully');
                             resolve(resolvedModule);
                         }).catch(error => {
+                            console.error('Module creation failed:', error);
                             reject(error);
                         });
+                        
                     } else {
-                        reject(new Error('Module function not found'));
+                        console.error('WorkingSM64Module function not found');
+                        reject(new Error('WorkingSM64Module function not found after script load'));
                     }
                 };
                 script.onerror = (error) => {
-                    reject(new Error('Failed to load Emscripten script: ' + error));
+                    console.error('Script load error:', error);
+                    reject(new Error('Failed to load Emscripten script'));
                 };
                 document.head.appendChild(script);
             });
@@ -420,6 +425,12 @@
                 if (gameModule._get_mario_coins) {
                     const coins = gameModule._get_mario_coins();
                     coinCountElement.textContent = coins;
+                }
+                
+                // Get Mario health
+                if (gameModule._get_mario_health) {
+                    const health = gameModule._get_mario_health();
+                    marioHealthElement.textContent = health;
                 }
                 
                 // Update status if game is running
